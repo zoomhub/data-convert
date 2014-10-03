@@ -1,0 +1,11 @@
+{
+  "name": "zoomhub-data-convert",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "underscore": "^1.7.0"
+  }
+}
