@@ -45,6 +45,81 @@ var LineReader = function(config) {
 };
 
 // ----------
+var processAnalytics = function() {
+  var output = {};
+
+  new LineReader({
+    name: 'input/analytics.tsv',
+    processLine: function(line, next) {
+      var parts = line.split('\t');
+      if (parts.length <= 1) {
+        next();
+        return;
+      }
+
+      var path = parts[0];
+      var id = path.replace(/^\/([^.]*).*$/, '$1');
+      if (id === 'Page path level 1') {
+        next();
+        return;
+      }
+
+      var isEmbed = /^\/[^.]*\.js/.test(path);
+      if (!output[id]) {
+        output[id] = {
+          id: id,
+          page: 0,
+          embed: 0,
+          total: 0
+        };
+      }
+
+      var count = parseInt(parts[1], 10);
+      if (isEmbed) {
+        output[id].embed += count;
+      } else {
+        output[id].page += count;
+      }
+
+      output[id].total += count;
+
+      // console.log(id);
+      next();
+    },
+    processDone: function() {
+      var writeOut = function(key) {
+        var text = '';
+        _.chain(output)
+          .map(function(v, k) {
+            return v;
+          })
+          .filter(function(v, i) {
+            return !!v[key];
+          })
+          .sortBy(function(v, i) {
+            return -v[key];
+          })
+          .each(function(v, i) {
+            text += v.id + ': ' + v[key] + '\n';
+          });
+
+        fs.writeFile('output2/' + key + '.txt', text, function(err) {
+          if (err) {
+            console.log('error writing file for ' + key, err);
+          }
+
+          console.log('success: ' + key);
+        });
+      };
+
+      writeOut('embed');
+      writeOut('page');
+      writeOut('total');
+    }
+  });
+};
+
+// ----------
 var processContentInfo = function() {
   new LineReader({
     name: 'input/ContentInfo.txt',
@@ -192,16 +267,24 @@ var processImageInfo = function() {
 };
 
 // ----------
-var start = function() {
-  fs.exists('output', function(exists) {
+var withFolder = function(path, next) {
+  fs.exists(path, function(exists) {
     if (exists) {
-      processContentInfo();
+      next();
     } else {
-      fs.mkdir('output', function(err) {
-        processContentInfo();
+      fs.mkdir(path, function(err) {
+        next();
       });
     }
   });
+};
+
+// ----------
+var start = function() {
+  // Uncomment one of these to select it for running:
+  // withFolder('output', processContentInfo);
+  // withFolder('output', processImageInfo);
+  // withFolder('output2', processAnalytics);
 };
 
 // ----------

@@ -1,4 +1,6 @@
 output
+output2
+output.zip
 node_modules
 *.sublime-workspace
 input
