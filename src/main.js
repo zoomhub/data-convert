@@ -120,6 +120,13 @@ var processAnalytics = function() {
 };
 
 // ----------
+var getFilePathForId = function(id) {
+  // NOTE: Since file systems are typically case-insensitive (even though
+  // they're case-aware), prefix capital letters with an underscore.
+  return 'output/' + id.replace(/([A-Z])/g, '_$1') + '.json';
+};
+
+// ----------
 var processContentInfo = function() {
   new LineReader({
     name: 'input/ContentInfo.txt',
@@ -142,9 +149,8 @@ var processContentInfo = function() {
         return;
       }
 
-      id = id.replace(/([A-Z])/g, '_$1');
-
       var info = {
+        id: id,
         attributionLink: parts[4],
         attributionText: parts[5],
         mime: parts[9],
@@ -172,7 +178,7 @@ var processContentInfo = function() {
       }
 
       // console.log(JSON.stringify(info, null, 2));
-      var fileName = 'output/' + id + '.json';
+      var fileName = getFilePathForId(id);
       fs.exists(fileName, function(exists) {
         if (exists) {
           console.log('skipping ' + id + ' because it already exists');
@@ -219,9 +225,8 @@ var processImageInfo = function() {
         return;
       }
 
-      id = id.replace(/([A-Z])/g, '_$1');
-
-      fs.readFile('output/' + id + '.json', 'utf8', function(err, data2) {
+      var fileName = getFilePathForId(id);
+      fs.readFile(fileName, 'utf8', function(err, data2) {
         if (err) {
           if (err.code !== 'ENOENT') {
             console.log('readError', err);
@@ -250,7 +255,7 @@ var processImageInfo = function() {
         info.width = parseInt(parts[9], 10);
 
         // console.log(JSON.stringify(info, null, 2));
-        fs.writeFile('output/' + id + '.json', JSON.stringify(info, null, 2), function(err) {
+        fs.writeFile(fileName, JSON.stringify(info, null, 2), function(err) {
           if (err) {
             console.log('error writing file for ' + id, err);
           }
