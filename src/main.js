@@ -156,14 +156,11 @@ var processContentInfo = function() {
         mime: parts[9],
         size: parseInt(parts[12], 10),
         title: parts[14],
-        url: parts[16]
+        url: parts[16],
+        ready: false,
+        failed: false,
+        progress: 0
       };
-
-      if (info.size <= 0) {
-        console.log('zero size file: ' + id);
-        next();
-        return;
-      }
 
       if (!info.attributionLink) {
         delete info.attributionLink;
@@ -248,11 +245,13 @@ var processImageInfo = function() {
           return;
         }
 
-        info.height = parseInt(parts[3], 10);
-        info.tileFormat = parts[5];
-        info.tileOverlap = parts[6];
-        info.tileSize = parts[7];
-        info.width = parseInt(parts[9], 10);
+        info.dzi = {
+          height: parseInt(parts[3], 10),
+          tileFormat: parts[5],
+          tileOverlap: parseInt(parts[6], 10),
+          tileSize: parseInt(parts[7], 10),
+          width: parseInt(parts[9], 10)
+        };
 
         // console.log(JSON.stringify(info, null, 2));
         fs.writeFile(fileName, JSON.stringify(info, null, 2), function(err) {
@@ -286,10 +285,16 @@ var withFolder = function(path, next) {
 
 // ----------
 var start = function() {
+  var flag = false;
+
   // Uncomment one of these to select it for running:
-  // withFolder('output', processContentInfo);
-  // withFolder('output', processImageInfo);
-  // withFolder('output2', processAnalytics);
+  // withFolder('output', processContentInfo); flag = true;
+  // withFolder('output', processImageInfo); flag = true;
+  // withFolder('output2', processAnalytics); flag = true;
+
+  if (!flag) {
+    console.log('!!! uncomment one of the actions in start()!');
+  }
 };
 
 // ----------
