@@ -3,7 +3,7 @@ var _ = require('underscore');
 var readline = require('readline');
 var stream = require('stream');
 
-
+// ----------
 var LineReader = function(config) {
   console.log('processing ' + config.name);
   var instream = fs.createReadStream(config.name);
@@ -271,6 +271,59 @@ var processImageInfo = function() {
 };
 
 // ----------
+var processContentByUrl = function() {
+  var path = 'input/content-by-url.json';
+  console.log('processing ' + path);
+  fs.readFile(path, function (err, data) {
+    if (err) {
+      console.log('error: ' + err);
+    }
+
+    console.log('received');
+    data = JSON.parse(data);
+    console.log('parsed, ' + _.size(data) + ' entries');
+    data = _.map(data, function(v, k) {
+      var fileName = k.replace(/\.json$/, '.txt');
+      var content = v.replace(/^\.\.\/content-by-id\/(.*)\.json$/, '$1');
+      if (!fileName || !content) {
+        console.log('bad item', k, v);
+        return null;
+      }
+
+      return {
+        fileName: fileName,
+        content: content
+      };
+    });
+
+    var index = 0;
+
+    var next = function() {
+      if (index >= data.length) {
+        return;
+      }
+
+      var info = data[index];
+      index++;
+      if (!info) {
+        next();
+        return;
+      }
+
+      fs.writeFile('output/' + info.fileName, info.content, function(err) {
+        if (err) {
+          console.log('error writing ' + info.fileName, err);
+        }
+
+        next();
+      });
+    };
+
+    next();
+  });
+};
+
+// ----------
 var withFolder = function(path, next) {
   fs.exists(path, function(exists) {
     if (exists) {
@@ -291,6 +344,7 @@ var start = function() {
   // withFolder('output', processContentInfo); flag = true;
   // withFolder('output', processImageInfo); flag = true;
   // withFolder('output2', processAnalytics); flag = true;
+  // withFolder('output', processContentByUrl); flag = true;
 
   if (!flag) {
     console.log('!!! uncomment one of the actions in start()!');
