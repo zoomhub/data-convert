@@ -324,6 +324,120 @@ var processContentByUrl = function() {
 };
 
 // ----------
+var uploadContentByUrl = function() {
+  var pkgcloud = require('pkgcloud');
+
+  var config = {
+    CONTENT_REGION: 'IAD',
+    RACKSPACE_USERNAME: 'zoomingservice',
+    RACKSPACE_API_KEY: 'YOUR KEY GOES HERE'
+  };
+
+  var client = pkgcloud.storage.createClient({
+    provider: 'rackspace',
+    username: config.RACKSPACE_USERNAME,
+    apiKey: config.RACKSPACE_API_KEY,
+    region: config.CONTENT_REGION
+  });
+
+  var success = function(file) {
+    console.log('success: ' + file);
+    fs.appendFile('done.txt', file + '\n');
+  };
+
+  var error = function(message) {
+    console.log(message);
+    fs.appendFile('error.txt', message + '\n');
+  };
+
+  error('--- starting ---');
+
+  var doneFiles = fs.readFileSync('done.txt', { encoding: 'utf8' }).split('\n');
+
+  doneFiles = _.chain(doneFiles)
+    .map(function(v, i) {
+      return v.replace(/^\s*(.*)\s*$/, '$1');
+    })
+    .filter(function(v, i) {
+      return !!v;
+    })
+    .value();
+
+  console.log(doneFiles.length + ' files already done');
+
+  fs.readdir('output', function(err, files) {
+    if (err) {
+      error('problem reading directory ' + err);
+      return;
+    }
+
+    console.log(files.length + ' files found');
+    var index = 0;
+    var going = 0;
+
+    var next = function() {
+      if (index >= files.length) {
+        console.log('done!');
+        return;
+      }
+
+      // if (index === 16) {
+      //   error('testing');
+      //   return;
+      // }
+
+      var filename = files[index];
+      index++;
+      if (index % 1000 === 0) {
+        console.log('processed ' + index + ' files');
+      }
+      if (!/\.txt$/.test(filename)) {
+        error('skipping ' + filename);
+        setTimeout(next, 1);
+        return;
+      }
+
+      if (_.contains(doneFiles, filename)) {
+        // console.log('already done ' + filename + '; skipping');
+        setTimeout(next, 1);
+        return;
+      }
+
+      var readStream = fs.createReadStream('output/' + filename);
+
+      var writeStream = client.upload({
+        container: 'content/content-by-url',
+        remote: filename
+      });
+
+      writeStream.on('error', function(err) {
+        going--;
+        error('error uploading ' + filename + ': ' + err);
+        startNext();
+      });
+
+      writeStream.on('success', function(file) {
+        going--;
+        success(filename);
+        startNext();
+      });
+
+      readStream.pipe(writeStream);
+      going++;
+      startNext();
+    };
+
+    var startNext = function() {
+      if (going < 10) {
+        setTimeout(next, 1);
+      }
+    };
+
+    startNext();
+  });
+};
+
+// ----------
 var withFolder = function(path, next) {
   fs.exists(path, function(exists) {
     if (exists) {
@@ -345,6 +459,7 @@ var start = function() {
   // withFolder('output', processImageInfo); flag = true;
   // withFolder('output2', processAnalytics); flag = true;
   // withFolder('output', processContentByUrl); flag = true;
+  // withFolder('output', uploadContentByUrl); flag = true;
 
   if (!flag) {
     console.log('!!! uncomment one of the actions in start()!');
